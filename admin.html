@@ -1,0 +1,524 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>لوحة تحكم المتجر</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Cairo:wght@600;700;800&family=Tajawal:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --color-bg:#FAF7F1;
+    --color-surface:#FFFFFF;
+    --color-primary:#1B4B43;
+    --color-primary-dark:#0F332D;
+    --color-accent:#C89B3C;
+    --color-accent-soft:#F1E4C3;
+    --color-text:#241F1A;
+    --color-text-muted:#726A5E;
+    --color-border:#E9E1D3;
+    --color-danger:#B5654F;
+    --radius:14px;
+    --shadow:0 14px 34px rgba(27,75,67,.10);
+    --font-display:'Cairo',sans-serif;
+    --font-body:'Tajawal',sans-serif;
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0;background:var(--color-bg);color:var(--color-text);
+    font-family:var(--font-body);line-height:1.6;
+  }
+  h1,h2,h3,.brand{font-family:var(--font-display);}
+  button{font-family:inherit;cursor:pointer;border:none;}
+  input,textarea{font-family:inherit;}
+
+  /* ---------- Login ---------- */
+  .login-wrap{
+    min-height:100vh;display:flex;align-items:center;justify-content:center;padding:20px;
+  }
+  .login-box{
+    background:var(--color-surface);border-radius:var(--radius);
+    box-shadow:var(--shadow);padding:36px 30px;max-width:380px;width:100%;
+    text-align:center;
+  }
+  .login-box h1{font-size:22px;color:var(--color-primary-dark);margin:0 0 6px;}
+  .login-box p.sub{color:var(--color-text-muted);font-size:13.5px;margin:0 0 22px;}
+  .field{margin-bottom:14px;text-align:right;}
+  .field label{display:block;font-size:12.5px;font-weight:700;color:var(--color-text-muted);margin-bottom:6px;}
+  .field input,.field textarea{
+    width:100%;padding:11px 13px;border:1px solid var(--color-border);border-radius:10px;
+    font-size:14px;background:#FCFAF6;
+  }
+  .field textarea{resize:vertical;min-height:60px;}
+  .btn{
+    width:100%;background:var(--color-primary);color:#fff;padding:12px;border-radius:10px;
+    font-weight:800;font-size:14.5px;transition:background .15s ease;
+  }
+  .btn:hover{background:var(--color-primary-dark);}
+  .btn:disabled{opacity:.5;cursor:not-allowed;}
+  .btn-outline{
+    background:transparent;color:var(--color-primary-dark);border:1px solid var(--color-border);
+  }
+  .btn-outline:hover{background:var(--color-accent-soft);}
+  .btn-danger{background:var(--color-danger);color:#fff;}
+  .btn-danger:hover{filter:brightness(.92);}
+  .msg{font-size:13px;margin-top:12px;min-height:18px;}
+  .msg.error{color:var(--color-danger);}
+  .msg.success{color:var(--color-primary);}
+
+  /* ---------- Dashboard shell ---------- */
+  header.topbar{
+    position:sticky;top:0;z-index:30;
+    display:flex;align-items:center;justify-content:space-between;
+    padding:16px 6%;background:rgba(250,247,241,.92);backdrop-filter:blur(8px);
+    border-bottom:1px solid var(--color-border);
+  }
+  .brand{font-size:20px;font-weight:800;color:var(--color-primary);}
+  .brand span{color:var(--color-accent);}
+  .logout-btn{
+    background:var(--color-surface);color:var(--color-text-muted);
+    border:1px solid var(--color-border);padding:8px 16px;border-radius:999px;font-size:13px;font-weight:700;
+  }
+  .logout-btn:hover{background:var(--color-accent-soft);color:var(--color-primary-dark);}
+
+  main{max-width:920px;margin:0 auto;padding:34px 6% 80px;}
+  .card-block{
+    background:var(--color-surface);border:1px solid var(--color-border);border-radius:var(--radius);
+    box-shadow:var(--shadow);padding:24px;margin-bottom:30px;
+  }
+  .card-block h2{margin:0 0 4px;font-size:18px;color:var(--color-primary-dark);}
+  .card-block .hint{color:var(--color-text-muted);font-size:12.5px;margin:0 0 18px;}
+  .settings-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;}
+  @media (max-width:560px){.settings-grid{grid-template-columns:1fr;}}
+  .settings-actions{display:flex;align-items:center;gap:14px;margin-top:6px;}
+  .settings-actions .btn{width:auto;padding:11px 26px;}
+
+  .section-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:18px;}
+  .section-head h2{margin:0;font-size:19px;color:var(--color-primary-dark);}
+  .add-btn-top{
+    background:var(--color-primary);color:#fff;padding:10px 18px;border-radius:999px;
+    font-weight:700;font-size:13.5px;
+  }
+  .add-btn-top:hover{background:var(--color-primary-dark);}
+
+  .admin-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:18px;}
+  .empty-note{
+    grid-column:1/-1;text-align:center;color:var(--color-text-muted);
+    padding:40px 10px;font-size:14px;
+  }
+  .admin-card{
+    background:var(--color-surface);border:1px solid var(--color-border);border-radius:var(--radius);
+    overflow:hidden;display:flex;flex-direction:column;
+  }
+  .admin-thumb{
+    height:130px;display:flex;align-items:center;justify-content:center;
+    font-size:36px;color:#fff;overflow:hidden;position:relative;
+  }
+  .admin-thumb img{width:100%;height:100%;object-fit:cover;}
+  .stock-pill{
+    position:absolute;top:8px;inset-inline-start:8px;
+    font-size:10.5px;font-weight:800;padding:4px 10px;border-radius:999px;
+  }
+  .stock-pill.in{background:#E2F0EA;color:var(--color-primary-dark);}
+  .stock-pill.out{background:#F6E4DE;color:var(--color-danger);}
+  .admin-card-body{padding:14px 14px 16px;display:flex;flex-direction:column;gap:6px;flex:1;}
+  .admin-card-body h3{margin:0;font-size:15px;}
+  .admin-card-body .price{font-family:var(--font-display);font-weight:800;color:var(--color-primary-dark);font-size:14.5px;}
+  .admin-card-actions{display:flex;gap:8px;margin-top:auto;padding-top:10px;}
+  .admin-card-actions button{
+    flex:1;padding:8px;border-radius:8px;font-size:12.5px;font-weight:700;
+    background:var(--color-accent-soft);color:var(--color-primary-dark);
+  }
+  .admin-card-actions button.del{background:#F6E4DE;color:var(--color-danger);}
+  .admin-card-actions button:hover{filter:brightness(.96);}
+
+  /* ---------- Modal ---------- */
+  .modal-overlay{
+    position:fixed;inset:0;background:rgba(15,51,45,.45);
+    opacity:0;pointer-events:none;transition:opacity .2s ease;
+    display:flex;align-items:center;justify-content:center;padding:20px;z-index:80;
+  }
+  .modal-overlay.open{opacity:1;pointer-events:auto;}
+  .modal-box{
+    background:var(--color-surface);border-radius:var(--radius);
+    max-width:480px;width:100%;max-height:90vh;overflow-y:auto;
+    box-shadow:var(--shadow);padding:26px;
+  }
+  .modal-box h2{margin:0 0 18px;font-size:19px;color:var(--color-primary-dark);}
+  .checkbox-row{display:flex;align-items:center;gap:8px;margin:6px 0 18px;}
+  .checkbox-row label{font-size:13.5px;font-weight:700;color:var(--color-text);}
+  #formImagePreview{
+    width:100%;height:120px;border-radius:10px;background:var(--color-bg);
+    border:1px dashed var(--color-border);margin-top:8px;
+    display:flex;align-items:center;justify-content:center;overflow:hidden;color:var(--color-text-muted);font-size:12.5px;
+  }
+  #formImagePreview img{width:100%;height:100%;object-fit:cover;}
+  .form-actions{display:flex;gap:10px;margin-top:8px;}
+  .form-actions .btn{padding:12px;}
+
+  .hidden{display:none !important;}
+</style>
+</head>
+<body>
+
+<!-- ================= شاشة تسجيل الدخول ================= -->
+<div class="login-wrap" id="loginScreen">
+  <div class="login-box">
+    <h1>لوحة تحكم متجر<span style="color:var(--color-accent)">ي</span></h1>
+    <p class="sub">سجّل دخولك لإدارة منتجاتك وإعدادات المتجر</p>
+    <div class="field">
+      <label for="loginEmail">البريد الإلكتروني</label>
+      <input type="email" id="loginEmail" placeholder="you@example.com">
+    </div>
+    <div class="field">
+      <label for="loginPassword">كلمة السر</label>
+      <input type="password" id="loginPassword" placeholder="••••••••">
+    </div>
+    <button class="btn" id="loginBtn">تسجيل الدخول</button>
+    <p class="msg error" id="loginMsg"></p>
+  </div>
+</div>
+
+<!-- ================= لوحة التحكم ================= -->
+<div id="dashboard" class="hidden">
+  <header class="topbar">
+    <div class="brand">لوحة تحكم متجر<span>ي</span></div>
+    <button class="logout-btn" id="logoutBtn">تسجيل الخروج</button>
+  </header>
+
+  <main>
+    <section class="card-block">
+      <h2>إعدادات المتجر</h2>
+      <p class="hint">هذي البيانات تنعرض تلقائياً بموقع المتجر (index.html)</p>
+      <div class="settings-grid">
+        <div class="field">
+          <label for="settingsWhatsapp">رقم واتساب المتجر (بصيغة دولية بدون + مثل 9647XXXXXXXXX)</label>
+          <input type="text" id="settingsWhatsapp" placeholder="9647XXXXXXXXX">
+        </div>
+        <div class="field">
+          <label for="settingsDelivery">رسوم التوصيل (د.ع)</label>
+          <input type="number" id="settingsDelivery" placeholder="5000">
+        </div>
+      </div>
+      <div class="settings-actions">
+        <button class="btn" id="saveSettingsBtn" style="width:auto;padding:11px 26px;">حفظ الإعدادات</button>
+        <span class="msg success" id="settingsMsg"></span>
+      </div>
+    </section>
+
+    <section class="card-block">
+      <div class="section-head">
+        <h2>المنتجات</h2>
+        <button class="add-btn-top" id="addProductBtn">+ إضافة منتج جديد</button>
+      </div>
+      <div class="admin-grid" id="productsList">
+        <div class="empty-note">جاري التحميل...</div>
+      </div>
+    </section>
+  </main>
+</div>
+
+<!-- ================= نموذج إضافة / تعديل منتج ================= -->
+<div class="modal-overlay" id="productFormOverlay">
+  <div class="modal-box">
+    <h2 id="formTitle">إضافة منتج جديد</h2>
+
+    <div class="field">
+      <label for="formName">اسم المنتج</label>
+      <input type="text" id="formName" placeholder="مثال: كريم مرطب">
+    </div>
+    <div class="field">
+      <label for="formPrice">السعر (د.ع)</label>
+      <input type="number" id="formPrice" placeholder="15000">
+    </div>
+    <div class="field">
+      <label for="formDesc">وصف قصير (يظهر بالبطاقة الرئيسية)</label>
+      <textarea id="formDesc" placeholder="وصف مختصر وجذاب..."></textarea>
+    </div>
+    <div class="field">
+      <label for="formDetails">وصف كامل (يظهر عند الضغط على المنتج — اختياري)</label>
+      <textarea id="formDetails" placeholder="تفاصيل أكثر عن المنتج، المكونات، طريقة الاستخدام..."></textarea>
+    </div>
+    <div class="field">
+      <label for="formImageUrl">رابط صورة المنتج (اختياري)</label>
+      <input type="text" id="formImageUrl" placeholder="https://i.imgur.com/xxxxx.jpg">
+      <p style="font-size:11.5px;color:var(--color-text-muted);margin:6px 0 0;">
+        ارفع صورتك مجاناً على imgbb.com أو postimages.org وانسخ رابط الصورة المباشر هنا.
+      </p>
+      <div id="formImagePreview">لا توجد صورة</div>
+    </div>
+    <div class="checkbox-row">
+      <input type="checkbox" id="formInStock" checked>
+      <label for="formInStock">متوفر بالمخزون</label>
+    </div>
+
+    <div class="form-actions">
+      <button class="btn btn-outline" id="formCancelBtn" style="flex:1;">إلغاء</button>
+      <button class="btn" id="formSaveBtn" style="flex:1;">حفظ المنتج</button>
+    </div>
+    <p class="msg" id="formMsg"></p>
+  </div>
+</div>
+
+<script src="https://www.gstatic.com/firebasejs/12.15.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/12.15.0/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/12.15.0/firebase-firestore-compat.js"></script>
+
+<script>
+/* =========================================================
+   ⚙️  إعدادات Firebase — الصق بيانات مشروعك هنا
+   (نفس البيانات بالضبط اللي بتحطها بملف index.html)
+   ========================================================= */
+const firebaseConfig = {
+  apiKey: "AIzaSyDrV0d8uebnDzrd4xqc7jtuaIp4YpWCWM0",
+  authDomain: "storeweb-8c4fc.firebaseapp.com",
+  projectId: "storeweb-8c4fc",
+  storageBucket: "storeweb-8c4fc.firebasestorage.app",
+  messagingSenderId: "387590106127",
+  appId: "1:387590106127:web:0fc39f0839b4f7d2e0477a"
+};
+
+firebase.initializeApp(firebaseConfig);
+const auth = firebase.auth();
+const db = firebase.firestore();
+
+/* =========================================================
+   لا حاجة لتعديل ما تحت هذا السطر
+   ========================================================= */
+
+const loginScreen = document.getElementById('loginScreen');
+const dashboard = document.getElementById('dashboard');
+
+auth.onAuthStateChanged(user=>{
+  if (user){
+    loginScreen.classList.add('hidden');
+    dashboard.classList.remove('hidden');
+    loadSettings();
+    loadProducts();
+  } else {
+    loginScreen.classList.remove('hidden');
+    dashboard.classList.add('hidden');
+  }
+});
+
+function authErrorMessage(err){
+  const code = err && err.code;
+  if (code === 'auth/invalid-email') return 'البريد الإلكتروني غير صالح.';
+  if (code === 'auth/user-not-found' || code === 'auth/wrong-password' || code === 'auth/invalid-credential'){
+    return 'البريد الإلكتروني أو كلمة السر غير صحيحة.';
+  }
+  if (code === 'auth/too-many-requests') return 'محاولات كثيرة، حاول بعد شوية.';
+  return 'حدث خطأ أثناء تسجيل الدخول. تأكد من إعداد Firebase بشكل صحيح.';
+}
+
+document.getElementById('loginBtn').addEventListener('click', ()=>{
+  const email = document.getElementById('loginEmail').value.trim();
+  const password = document.getElementById('loginPassword').value;
+  const msgEl = document.getElementById('loginMsg');
+  msgEl.textContent = '';
+  if (!email || !password){
+    msgEl.textContent = 'الرجاء إدخال البريد الإلكتروني وكلمة السر.';
+    return;
+  }
+  auth.signInWithEmailAndPassword(email, password).catch(err=>{
+    msgEl.textContent = authErrorMessage(err);
+  });
+});
+
+document.getElementById('logoutBtn').addEventListener('click', ()=>{
+  auth.signOut();
+});
+
+/* ---------- إعدادات المتجر ---------- */
+function loadSettings(){
+  db.collection('settings').doc('store').get().then(doc=>{
+    if (doc.exists){
+      const s = doc.data();
+      document.getElementById('settingsWhatsapp').value = s.whatsappNumber || '';
+      document.getElementById('settingsDelivery').value = s.deliveryFee != null ? s.deliveryFee : '';
+    }
+  }).catch(err=>console.error(err));
+}
+
+document.getElementById('saveSettingsBtn').addEventListener('click', ()=>{
+  const whatsappNumber = document.getElementById('settingsWhatsapp').value.trim();
+  const deliveryFee = Number(document.getElementById('settingsDelivery').value) || 0;
+  const msgEl = document.getElementById('settingsMsg');
+  msgEl.className = 'msg';
+  msgEl.textContent = 'جاري الحفظ...';
+
+  db.collection('settings').doc('store').set({ whatsappNumber, deliveryFee }, { merge: true })
+    .then(()=>{
+      msgEl.className = 'msg success';
+      msgEl.textContent = 'تم الحفظ ✓';
+      setTimeout(()=>{ msgEl.textContent=''; }, 2500);
+    })
+    .catch(err=>{
+      msgEl.className = 'msg error';
+      msgEl.textContent = 'تعذّر الحفظ، حاول مرة أخرى.';
+      console.error(err);
+    });
+});
+
+/* ---------- المنتجات ---------- */
+let PRODUCTS_CACHE = [];
+
+function mediaHTML(p){
+  return p.image ? `<img src="${p.image}" alt="${p.name}">` : (p.icon || '📦');
+}
+
+function loadProducts(){
+  const list = document.getElementById('productsList');
+  list.innerHTML = `<div class="empty-note">جاري التحميل...</div>`;
+  db.collection('products').orderBy('createdAt','desc').get().then(snap=>{
+    PRODUCTS_CACHE = snap.docs.map(doc=>({ id: doc.id, ...doc.data() }));
+    renderProductsList();
+  }).catch(err=>{
+    list.innerHTML = `<div class="empty-note">تعذّر تحميل المنتجات.</div>`;
+    console.error(err);
+  });
+}
+
+function renderProductsList(){
+  const list = document.getElementById('productsList');
+  if (PRODUCTS_CACHE.length === 0){
+    list.innerHTML = `<div class="empty-note">ما عندك منتجات بعد. اضغط "إضافة منتج جديد" لتبدأ.</div>`;
+    return;
+  }
+  list.innerHTML = PRODUCTS_CACHE.map(p => `
+    <div class="admin-card">
+      <div class="admin-thumb" style="background:${p.color || '#1B4B43'}">
+        <span class="stock-pill ${p.inStock === false ? 'out' : 'in'}">${p.inStock === false ? 'نفذ' : 'متوفر'}</span>
+        ${mediaHTML(p)}
+      </div>
+      <div class="admin-card-body">
+        <h3>${p.name}</h3>
+        <span class="price">${Number(p.price || 0).toLocaleString('en-US')} د.ع</span>
+        <div class="admin-card-actions">
+          <button class="edit" data-id="${p.id}">تعديل</button>
+          <button class="del" data-id="${p.id}">حذف</button>
+        </div>
+      </div>
+    </div>
+  `).join('');
+
+  list.querySelectorAll('.edit').forEach(btn=>{
+    btn.addEventListener('click', ()=> openProductForm(btn.dataset.id));
+  });
+  list.querySelectorAll('.del').forEach(btn=>{
+    btn.addEventListener('click', ()=> deleteProduct(btn.dataset.id));
+  });
+}
+
+function deleteProduct(id){
+  const p = PRODUCTS_CACHE.find(x=>x.id===id);
+  if (!p) return;
+  if (!confirm(`متأكد تريد حذف "${p.name}"؟`)) return;
+  db.collection('products').doc(id).delete().then(loadProducts).catch(err=>{
+    alert('تعذّر حذف المنتج.');
+    console.error(err);
+  });
+}
+
+/* ---------- نموذج إضافة / تعديل ---------- */
+let editingId = null;
+
+function updateImagePreview(url){
+  const el = document.getElementById('formImagePreview');
+  el.innerHTML = url ? `<img src="${url}" alt="">` : 'لا توجد صورة';
+}
+
+function openProductForm(id){
+  const overlay = document.getElementById('productFormOverlay');
+  const msgEl = document.getElementById('formMsg');
+  msgEl.textContent = '';
+  msgEl.className = 'msg';
+  if (id){
+    const p = PRODUCTS_CACHE.find(x=>x.id===id);
+    if (!p) return;
+    editingId = id;
+    document.getElementById('formTitle').textContent = 'تعديل المنتج';
+    document.getElementById('formName').value = p.name || '';
+    document.getElementById('formPrice').value = p.price || '';
+    document.getElementById('formDesc').value = p.desc || '';
+    document.getElementById('formDetails').value = p.details || '';
+    document.getElementById('formImageUrl').value = p.image || '';
+    document.getElementById('formInStock').checked = p.inStock !== false;
+    updateImagePreview(p.image || '');
+  } else {
+    editingId = null;
+    document.getElementById('formTitle').textContent = 'إضافة منتج جديد';
+    document.getElementById('formName').value = '';
+    document.getElementById('formPrice').value = '';
+    document.getElementById('formDesc').value = '';
+    document.getElementById('formDetails').value = '';
+    document.getElementById('formImageUrl').value = '';
+    document.getElementById('formInStock').checked = true;
+    updateImagePreview('');
+  }
+
+  overlay.classList.add('open');
+}
+
+function closeProductForm(){
+  document.getElementById('productFormOverlay').classList.remove('open');
+}
+
+document.getElementById('addProductBtn').addEventListener('click', ()=> openProductForm(null));
+document.getElementById('formCancelBtn').addEventListener('click', closeProductForm);
+document.getElementById('productFormOverlay').addEventListener('click', (e)=>{
+  if (e.target.id === 'productFormOverlay') closeProductForm();
+});
+
+document.getElementById('formImageUrl').addEventListener('input', (e)=>{
+  updateImagePreview(e.target.value.trim());
+});
+
+document.getElementById('formSaveBtn').addEventListener('click', async ()=>{
+  const name = document.getElementById('formName').value.trim();
+  const price = Number(document.getElementById('formPrice').value);
+  const desc = document.getElementById('formDesc').value.trim();
+  const details = document.getElementById('formDetails').value.trim();
+  const inStock = document.getElementById('formInStock').checked;
+  const image = document.getElementById('formImageUrl').value.trim();
+  const msgEl = document.getElementById('formMsg');
+  const saveBtn = document.getElementById('formSaveBtn');
+
+  msgEl.className = 'msg';
+  if (!name || !price){
+    msgEl.className = 'msg error';
+    msgEl.textContent = 'الرجاء إدخال اسم المنتج والسعر.';
+    return;
+  }
+
+  saveBtn.disabled = true;
+  msgEl.textContent = 'جاري الحفظ...';
+
+  try{
+    const data = {
+      name, price, desc, details, inStock, image,
+      color: '#1B4B43',
+      icon: '📦'
+    };
+
+    if (editingId){
+      await db.collection('products').doc(editingId).update(data);
+    } else {
+      data.createdAt = firebase.firestore.FieldValue.serverTimestamp();
+      await db.collection('products').add(data);
+    }
+
+    saveBtn.disabled = false;
+    closeProductForm();
+    loadProducts();
+  } catch(err){
+    console.error(err);
+    saveBtn.disabled = false;
+    msgEl.className = 'msg error';
+    msgEl.textContent = 'تعذّر حفظ المنتج. تأكد من إعداد Firebase (Firestore) بشكل صحيح.';
+  }
+});
+</script>
+
+</body>
+</html>
