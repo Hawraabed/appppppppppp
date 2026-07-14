@@ -256,6 +256,11 @@
           <input type="number" id="formDealPrice" placeholder="مثال: 18000">
         </div>
       </div>
+      <label for="formBundleGroup" style="margin-top:14px;">مجموعة "امزج واختر" (اختياري)</label>
+      <p style="font-size:11.5px;color:var(--color-text-muted);margin:0 0 8px;">
+        إذا تريد العرض يشتغل بين منتجات مختلفة (مثلاً صابون كركم + صابون نوع ثاني = 18)، اعطيهم نفس الاسم هنا بالضبط (مثلاً "صابون")، وخلي حقلي "عرض كمية" فوق نفس الأرقام بكل المنتجات المشمولة. اتركه فارغ إذا العرض يخص هذا المنتج بروحه بس.
+      </p>
+      <input type="text" id="formBundleGroup" placeholder="مثال: صابون">
     </div>
     <div class="field">
       <label for="formDesc">وصف قصير (يظهر بالبطاقة الرئيسية)</label>
@@ -469,6 +474,7 @@ function openProductForm(id){
     document.getElementById('formOldPrice').value = p.oldPrice || '';
     document.getElementById('formDealQty').value = p.dealQty || '';
     document.getElementById('formDealPrice').value = p.dealPrice || '';
+    document.getElementById('formBundleGroup').value = p.bundleGroup || '';
     document.getElementById('formDesc').value = p.desc || '';
     document.getElementById('formDetails').value = p.details || '';
     document.getElementById('formImageUrl').value = p.image || '';
@@ -482,6 +488,7 @@ function openProductForm(id){
     document.getElementById('formOldPrice').value = '';
     document.getElementById('formDealQty').value = '';
     document.getElementById('formDealPrice').value = '';
+    document.getElementById('formBundleGroup').value = '';
     document.getElementById('formDesc').value = '';
     document.getElementById('formDetails').value = '';
     document.getElementById('formImageUrl').value = '';
@@ -515,6 +522,7 @@ document.getElementById('formSaveBtn').addEventListener('click', async ()=>{
   const dealPriceRaw = document.getElementById('formDealPrice').value.trim();
   const dealQty = dealQtyRaw ? Number(dealQtyRaw) : null;
   const dealPrice = dealPriceRaw ? Number(dealPriceRaw) : null;
+  const bundleGroup = document.getElementById('formBundleGroup').value.trim();
   const desc = document.getElementById('formDesc').value.trim();
   const details = document.getElementById('formDetails').value.trim();
   const inStock = document.getElementById('formInStock').checked;
@@ -543,13 +551,18 @@ document.getElementById('formSaveBtn').addEventListener('click', async ()=>{
     msgEl.textContent = 'تأكد إن الكمية 2 أو أكثر، وإن سعر العرض أقل من السعر العادي مضروب بالكمية.';
     return;
   }
+  if (bundleGroup && dealQty === null){
+    msgEl.className = 'msg error';
+    msgEl.textContent = 'إذا حطيت اسم مجموعة "امزج واختر"، لازم تعبي حقلي الكمية وسعر العرض فوق كمان.';
+    return;
+  }
 
   saveBtn.disabled = true;
   msgEl.textContent = 'جاري الحفظ...';
 
   try{
     const data = {
-      name, price, oldPrice, dealQty, dealPrice, desc, details, inStock, image,
+      name, price, oldPrice, dealQty, dealPrice, bundleGroup, desc, details, inStock, image,
       color: '#1B4B43',
       icon: '📦'
     };
