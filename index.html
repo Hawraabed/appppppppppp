@@ -165,6 +165,11 @@
     font-size:13px;font-weight:600;margin-inline-end:6px;font-family:var(--font-display);
   }
   .price-row{display:flex;align-items:baseline;flex-wrap:wrap;}
+  .deal-badge{
+    background:var(--color-accent-soft);color:var(--color-primary-dark);
+    font-size:11.5px;font-weight:700;padding:4px 10px;border-radius:999px;
+    display:inline-block;margin-top:6px;width:fit-content;
+  }
   .add-btn{
     background:var(--color-accent-soft);color:var(--color-primary-dark);
     padding:9px 16px;border-radius:999px;font-weight:700;font-size:13px;
@@ -385,6 +390,7 @@
       <h2 id="modalName"></h2>
       <p class="modal-desc" id="modalDesc"></p>
       <div class="modal-price" id="modalPrice"></div>
+      <div id="modalDealBadge"></div>
       <div class="modal-qty-row">
         <button class="qty-btn" id="modalQtyMinus">−</button>
         <span class="qty-val" id="modalQtyVal">1</span>
@@ -446,6 +452,24 @@ function priceHTML(p){
   return `<span class="price">${fmt(p.price)}</span>`;
 }
 
+function dealBadge(p){
+  if (p.dealQty && p.dealPrice){
+    return `<div class="deal-badge">🏷️ ${p.dealQty} قطع بـ ${fmt(p.dealPrice)}</div>`;
+  }
+  return '';
+}
+
+function lineTotalFor(p, qty){
+  if (p.dealQty && p.dealPrice && Number(p.dealQty) > 1){
+    const dealQty = Number(p.dealQty);
+    const dealPrice = Number(p.dealPrice);
+    const bundles = Math.floor(qty / dealQty);
+    const remainder = qty % dealQty;
+    return bundles * dealPrice + remainder * Number(p.price);
+  }
+  return Number(p.price) * qty;
+}
+
 async function initStore(){
   const grid = document.getElementById('productGrid');
   try{
@@ -489,6 +513,7 @@ function renderProducts(){
           ${priceHTML(p)}
           <button class="add-btn" data-id="${p.id}" ${p.inStock === false ? 'disabled' : ''}>${p.inStock === false ? 'نفذت الكمية' : 'أضف للسلة'}</button>
         </div>
+        ${dealBadge(p)}
       </div>
     </div>
   `).join('');
@@ -529,6 +554,7 @@ function openProductModal(id){
   document.getElementById('modalName').textContent = p.name;
   document.getElementById('modalDesc').textContent = p.details ? p.details : (p.desc || '');
   document.getElementById('modalPrice').innerHTML = priceHTML(p);
+  document.getElementById('modalDealBadge').innerHTML = dealBadge(p);
   document.getElementById('modalQtyVal').textContent = modalQty;
 
   const addBtn = document.getElementById('modalAddBtn');
@@ -596,14 +622,14 @@ function renderCart(){
     const p = PRODUCTS.find(x=>x.id===id);
     if (!p) return '';
     const qty = cart[id];
-    const lineTotal = p.price * qty;
+    const lineTotal = lineTotalFor(p, qty);
     subtotal += lineTotal;
     return `
       <div class="cart-item">
         <div class="cart-item-media" style="background:${mediaBg(p)}">${mediaHTML(p)}</div>
         <div class="cart-item-info">
           <h4>${p.name}</h4>
-          <p class="unit-price">${fmt(p.price)} / قطعة</p>
+          <p class="unit-price">${fmt(p.price)} / قطعة${p.dealQty && p.dealPrice ? ` — عرض: ${p.dealQty} بـ ${fmt(p.dealPrice)}` : ''}</p>
           <div class="qty-row">
             <button class="qty-btn" onclick="changeQty('${id}',-1)">−</button>
             <span class="qty-val">${qty}</span>
@@ -662,7 +688,7 @@ document.getElementById('checkoutBtn').addEventListener('click', ()=>{
     const p = PRODUCTS.find(x=>x.id===id);
     if (!p) return;
     const qty = cart[id];
-    const lineTotal = p.price * qty;
+    const lineTotal = lineTotalFor(p, qty);
     subtotal += lineTotal;
     lines += `• ${p.name} × ${qty} = ${fmt(lineTotal)}\n`;
   });
