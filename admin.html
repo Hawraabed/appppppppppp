@@ -204,7 +204,18 @@
           <label for="settingsDelivery">رسوم التوصيل (د.ع)</label>
           <input type="number" id="settingsDelivery" placeholder="5000">
         </div>
+        <div class="field">
+          <label for="settingsPaymentLabel">اسم وسيلة الدفع الإلكتروني (اختياري)</label>
+          <input type="text" id="settingsPaymentLabel" placeholder="مثال: كي كارد">
+        </div>
+        <div class="field">
+          <label for="settingsPaymentAccount">رقم الحساب للدفع الإلكتروني (اختياري)</label>
+          <input type="text" id="settingsPaymentAccount" placeholder="مثال: 4898478609">
+        </div>
       </div>
+      <p style="font-size:11.5px;color:var(--color-text-muted);margin:8px 0 0;">
+        إذا عبّيت هذولي، يظهر بالسلة تنبيه للزبون بمعلومات الدفع الإلكتروني، وتنضاف لرسالة الواتساب تلقائياً. اتركهم فارغين إذا الدفع بس عند الاستلام.
+      </p>
       <div class="settings-actions">
         <button class="btn" id="saveSettingsBtn" style="width:auto;padding:11px 26px;">حفظ الإعدادات</button>
         <span class="msg success" id="settingsMsg"></span>
@@ -367,6 +378,8 @@ function loadSettings(){
       const s = doc.data();
       document.getElementById('settingsWhatsapp').value = s.whatsappNumber || '';
       document.getElementById('settingsDelivery').value = s.deliveryFee != null ? s.deliveryFee : '';
+      document.getElementById('settingsPaymentLabel').value = s.paymentLabel || '';
+      document.getElementById('settingsPaymentAccount').value = s.paymentAccount || '';
     }
   }).catch(err=>console.error(err));
 }
@@ -374,11 +387,13 @@ function loadSettings(){
 document.getElementById('saveSettingsBtn').addEventListener('click', ()=>{
   const whatsappNumber = document.getElementById('settingsWhatsapp').value.trim();
   const deliveryFee = Number(document.getElementById('settingsDelivery').value) || 0;
+  const paymentLabel = document.getElementById('settingsPaymentLabel').value.trim();
+  const paymentAccount = document.getElementById('settingsPaymentAccount').value.trim();
   const msgEl = document.getElementById('settingsMsg');
   msgEl.className = 'msg';
   msgEl.textContent = 'جاري الحفظ...';
 
-  db.collection('settings').doc('store').set({ whatsappNumber, deliveryFee }, { merge: true })
+  db.collection('settings').doc('store').set({ whatsappNumber, deliveryFee, paymentLabel, paymentAccount }, { merge: true })
     .then(()=>{
       msgEl.className = 'msg success';
       msgEl.textContent = 'تم الحفظ ✓';
