@@ -282,6 +282,19 @@
     font-size:12.5px;line-height:1.8;
   }
   .payment-info-box strong{font-weight:800;}
+  .payment-method-section{display:none;}
+  .payment-method-section.active{display:block;}
+  .payment-options{display:flex;gap:10px;}
+  .payment-option{
+    flex:1;display:flex;align-items:center;gap:8px;
+    border:1px solid var(--color-border);border-radius:10px;
+    padding:10px 12px;font-size:13px;font-weight:600;color:var(--color-text);
+    cursor:pointer;margin:0;background:#FCFAF6;
+  }
+  .payment-option:has(input:checked){
+    border-color:var(--color-primary);background:var(--color-accent-soft);
+  }
+  .payment-option input{width:auto;accent-color:var(--color-primary);}
 
   .cart-summary{padding:16px 22px 22px;border-top:1px solid var(--color-border);}
   .sum-row{display:flex;justify-content:space-between;font-size:14px;color:var(--color-text-muted);margin-bottom:8px;}
@@ -371,7 +384,20 @@
     <input type="tel" id="custPhone" placeholder="07xxxxxxxxx">
     <label for="custAddress">عنوان التوصيل (اختياري)</label>
     <textarea id="custAddress" placeholder="المحافظة، المنطقة، أقرب نقطة دالة"></textarea>
-    <div id="paymentInfoBox"></div>
+    <div id="paymentMethodSection" class="payment-method-section">
+      <label>طريقة الدفع</label>
+      <div class="payment-options">
+        <label class="payment-option">
+          <input type="radio" name="paymentMethod" value="cod" checked>
+          <span>الدفع عند الاستلام</span>
+        </label>
+        <label class="payment-option">
+          <input type="radio" name="paymentMethod" value="electronic">
+          <span id="electronicOptionLabel">دفع إلكتروني</span>
+        </label>
+      </div>
+      <div id="paymentInfoBox"></div>
+    </div>
   </div>
 
   <div class="cart-summary">
@@ -560,19 +586,37 @@ async function initStore(){
 }
 
 function renderPaymentInfo(){
+  const section = document.getElementById('paymentMethodSection');
   const box = document.getElementById('paymentInfoBox');
+
   if (!PAYMENT_ACCOUNT){
-    box.className = '';
-    box.innerHTML = '';
+    section.classList.remove('active');
     return;
   }
-  box.className = 'payment-info-box';
+
+  section.classList.add('active');
   const label = PAYMENT_LABEL || 'الدفع الإلكتروني';
-  box.innerHTML = `
-    💳 <strong>${label}</strong><br>
-    رقم الحساب: <strong>${PAYMENT_ACCOUNT}</strong><br>
-    يرجى إرسال وصل التحويل بعد إرسال طلبك عبر واتساب.
-  `;
+  document.getElementById('electronicOptionLabel').textContent = label;
+
+  function updateBox(){
+    const selected = document.querySelector('input[name="paymentMethod"]:checked').value;
+    if (selected === 'electronic'){
+      box.className = 'payment-info-box';
+      box.innerHTML = `
+        💳 <strong>${label}</strong><br>
+        رقم الحساب: <strong>${PAYMENT_ACCOUNT}</strong><br>
+        يرجى تحويل المبلغ على هذا الحساب، وإرسال وصل التحويل بعد إرسال طلبك عبر واتساب.
+      `;
+    } else {
+      box.className = '';
+      box.innerHTML = '';
+    }
+  }
+
+  document.querySelectorAll('input[name="paymentMethod"]').forEach(input=>{
+    input.addEventListener('change', updateBox);
+  });
+  updateBox();
 }
 
 function renderProducts(){
@@ -795,9 +839,17 @@ document.getElementById('checkoutBtn').addEventListener('click', ()=>{
   if (name) message += `\n\nالاسم: ${name}`;
   message += `\nرقم الهاتف: ${phone}`;
   if (address) message += `\nالعنوان: ${address}`;
+
   if (PAYMENT_ACCOUNT){
-    message += `\n\n💳 ${PAYMENT_LABEL || 'الدفع الإلكتروني'}: ${PAYMENT_ACCOUNT}`;
-    message += `\nيرجى إرسال وصل التحويل بعد إرسال هذا الطلب.`;
+    const selectedMethod = document.querySelector('input[name="paymentMethod"]:checked');
+    const isElectronic = selectedMethod && selectedMethod.value === 'electronic';
+    if (isElectronic){
+      message += `\n\nطريقة الدفع: ${PAYMENT_LABEL || 'الدفع الإلكتروني'} (تحويل)`;
+      message += `\n💳 رقم الحساب: ${PAYMENT_ACCOUNT}`;
+      message += `\nسأرسل وصل التحويل بعد هذا الطلب.`;
+    } else {
+      message += `\n\nطريقة الدفع: الدفع عند الاستلام`;
+    }
   }
 
   const encoded = encodeURIComponent(message);
