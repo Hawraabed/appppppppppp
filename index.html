@@ -369,6 +369,7 @@
 
   <div class="cart-summary">
     <div class="sum-row"><span>المجموع الفرعي</span><span id="subtotalVal">0 د.ع</span></div>
+    <div class="sum-row" id="dealsSavingsRow" style="display:none;color:#3E7A5E;font-weight:700;"><span>خصم العروض</span><span id="dealsSavingsVal">0 د.ع</span></div>
     <div class="sum-row"><span>التوصيل</span><span id="deliveryVal">0 د.ع</span></div>
     <div class="sum-row total"><span>المجموع الكلي</span><span id="totalVal">0 د.ع</span></div>
     <button class="checkout-btn" id="checkoutBtn" disabled>
@@ -454,6 +455,9 @@ function priceHTML(p){
 
 function dealBadge(p){
   if (p.dealQty && p.dealPrice){
+    if (p.bundleGroup){
+      return `<div class="deal-badge">🏷️ امزج واختر: ${p.dealQty} قطع بـ ${fmt(p.dealPrice)}</div>`;
+    }
     return `<div class="deal-badge">🏷️ ${p.dealQty} قطع بـ ${fmt(p.dealPrice)}</div>`;
   }
   return '';
@@ -468,6 +472,57 @@ function lineTotalFor(p, qty){
     return bundles * dealPrice + remainder * Number(p.price);
   }
   return Number(p.price) * qty;
+}
+
+// يحسب مجموع السلة آخذاً بنظر الاعتبار عروض "امزج واختر" المشتركة بين منتجات مختلفة
+function computeCartTotals(){
+  const ids = Object.keys(cart);
+  let naiveSubtotal = 0;
+  const groups = {};
+
+  ids.forEach(id=>{
+    const p = PRODUCTS.find(x=>x.id===id);
+    if (!p) return;
+    const qty = cart[id];
+    naiveSubtotal += Number(p.price) * qty;
+
+    if (p.bundleGroup){
+      if (!groups[p.bundleGroup]) groups[p.bundleGroup] = { items: [], dealQty: null, dealPrice: null };
+      groups[p.bundleGroup].items.push({ price: Number(p.price), qty });
+      if (groups[p.bundleGroup].dealQty === null && p.dealQty && p.dealPrice){
+        groups[p.bundleGroup].dealQty = Number(p.dealQty);
+        groups[p.bundleGroup].dealPrice = Number(p.dealPrice);
+      }
+    }
+  });
+
+  let actualSubtotal = 0;
+
+  Object.values(groups).forEach(group=>{
+    if (!group.dealQty || !group.dealPrice){
+      group.items.forEach(it => actualSubtotal += it.price * it.qty);
+      return;
+    }
+    let units = [];
+    group.items.forEach(it=>{
+      for (let i = 0; i < it.qty; i++) units.push(it.price);
+    });
+    units.sort((a, b) => b - a);
+    const bundles = Math.floor(units.length / group.dealQty);
+    const bundledCount = bundles * group.dealQty;
+    const remainderUnits = units.slice(bundledCount);
+    actualSubtotal += bundles * group.dealPrice;
+    remainderUnits.forEach(price => actualSubtotal += price);
+  });
+
+  ids.forEach(id=>{
+    const p = PRODUCTS.find(x=>x.id===id);
+    if (!p || p.bundleGroup) return;
+    const qty = cart[id];
+    actualSubtotal += lineTotalFor(p, qty);
+  });
+
+  return { naiveSubtotal, actualSubtotal, dealsSavings: naiveSubtotal - actualSubtotal };
 }
 
 async function initStore(){
@@ -613,6 +668,7 @@ function renderCart(){
     document.getElementById('subtotalVal').textContent = fmt(0);
     document.getElementById('deliveryVal').textContent = fmt(DELIVERY_FEE);
     document.getElementById('totalVal').textContent = fmt(0);
+    document.getElementById('dealsSavingsRow').style.display = 'none';
     document.getElementById('checkoutBtn').disabled = true;
     return;
   }
@@ -622,14 +678,13 @@ function renderCart(){
     const p = PRODUCTS.find(x=>x.id===id);
     if (!p) return '';
     const qty = cart[id];
-    const lineTotal = lineTotalFor(p, qty);
-    subtotal += lineTotal;
+    const lineTotal = p.bundleGroup ? Number(p.price) * qty : lineTotalFor(p, qty);
     return `
       <div class="cart-item">
         <div class="cart-item-media" style="background:${mediaBg(p)}">${mediaHTML(p)}</div>
         <div class="cart-item-info">
           <h4>${p.name}</h4>
-          <p class="unit-price">${fmt(p.price)} / قطعة${p.dealQty && p.dealPrice ? ` — عرض: ${p.dealQty} بـ ${fmt(p.dealPrice)}` : ''}</p>
+          <p class="unit-price">${fmt(p.price)} / قطعة${p.dealQty && p.dealPrice ? ` — عرض: ${p.dealQty} بـ ${fmt(p.dealPrice)}${p.bundleGroup ? ' (قابل للمزج)' : ''}` : ''}</p>
           <div class="qty-row">
             <button class="qty-btn" onclick="changeQty('${id}',-1)">−</button>
             <span class="qty-val">${qty}</span>
@@ -642,10 +697,21 @@ function renderCart(){
     `;
   }).join('');
 
+  const { actualSubtotal, dealsSavings } = computeCartTotals();
+  subtotal = actualSubtotal;
   const total = subtotal + DELIVERY_FEE;
   document.getElementById('subtotalVal').textContent = fmt(subtotal);
   document.getElementById('deliveryVal').textContent = fmt(DELIVERY_FEE);
   document.getElementById('totalVal').textContent = fmt(total);
+
+  const dealsRow = document.getElementById('dealsSavingsRow');
+  if (dealsSavings > 0){
+    dealsRow.style.display = 'flex';
+    document.getElementById('dealsSavingsVal').textContent = '-' + fmt(dealsSavings);
+  } else {
+    dealsRow.style.display = 'none';
+  }
+
   document.getElementById('checkoutBtn').disabled = false;
 }
 
@@ -682,20 +748,20 @@ document.getElementById('checkoutBtn').addEventListener('click', ()=>{
     return;
   }
 
-  let subtotal = 0;
   let lines = "";
   ids.forEach(id=>{
     const p = PRODUCTS.find(x=>x.id===id);
     if (!p) return;
     const qty = cart[id];
-    const lineTotal = lineTotalFor(p, qty);
-    subtotal += lineTotal;
+    const lineTotal = p.bundleGroup ? Number(p.price) * qty : lineTotalFor(p, qty);
     lines += `• ${p.name} × ${qty} = ${fmt(lineTotal)}\n`;
   });
-  const total = subtotal + DELIVERY_FEE;
+  const { actualSubtotal, dealsSavings } = computeCartTotals();
+  const total = actualSubtotal + DELIVERY_FEE;
 
   let message = "مرحباً 👋، أريد تأكيد طلب جديد:\n\n";
   message += lines;
+  if (dealsSavings > 0) message += `\nخصم العروض: -${fmt(dealsSavings)}`;
   message += `\nالتوصيل: ${fmt(DELIVERY_FEE)}`;
   message += `\nالمجموع الكلي: ${fmt(total)}`;
   if (name) message += `\n\nالاسم: ${name}`;
