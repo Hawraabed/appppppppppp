@@ -434,6 +434,10 @@ function mediaHTML(p){
     : (p.icon || "📦");
 }
 
+function mediaBg(p){
+  return p.image ? '#FFFFFF' : (p.color || '#1B4B43');
+}
+
 function priceHTML(p){
   const hasDiscount = p.oldPrice && Number(p.oldPrice) > Number(p.price);
   if (hasDiscount){
@@ -474,7 +478,7 @@ function renderProducts(){
 
   grid.innerHTML = PRODUCTS.map(p => `
     <div class="card ${p.inStock === false ? 'sold-out' : ''}" data-id="${p.id}">
-      <div class="card-media" style="background:${p.color || '#1B4B43'}">
+      <div class="card-media" style="background:${mediaBg(p)}">
         ${p.inStock === false ? '<span class="sold-out-badge">نفذت الكمية</span>' : ''}
         ${mediaHTML(p)}
       </div>
@@ -520,7 +524,7 @@ function openProductModal(id){
   modalProductId = id;
   modalQty = 1;
 
-  document.getElementById('modalMedia').style.background = p.color || '#1B4B43';
+  document.getElementById('modalMedia').style.background = mediaBg(p);
   document.getElementById('modalMedia').innerHTML = mediaHTML(p);
   document.getElementById('modalName').textContent = p.name;
   document.getElementById('modalDesc').textContent = p.details ? p.details : (p.desc || '');
@@ -596,7 +600,7 @@ function renderCart(){
     subtotal += lineTotal;
     return `
       <div class="cart-item">
-        <div class="cart-item-media" style="background:${p.color || '#1B4B43'}">${mediaHTML(p)}</div>
+        <div class="cart-item-media" style="background:${mediaBg(p)}">${mediaHTML(p)}</div>
         <div class="cart-item-info">
           <h4>${p.name}</h4>
           <p class="unit-price">${fmt(p.price)} / قطعة</p>
