@@ -276,6 +276,12 @@
     font-family:inherit;font-size:14px;background:#FCFAF6;
   }
   .cart-form textarea{resize:vertical;min-height:54px;}
+  .payment-info-box{
+    margin-top:14px;padding:12px 14px;border-radius:10px;
+    background:var(--color-accent-soft);color:var(--color-primary-dark);
+    font-size:12.5px;line-height:1.8;
+  }
+  .payment-info-box strong{font-weight:800;}
 
   .cart-summary{padding:16px 22px 22px;border-top:1px solid var(--color-border);}
   .sum-row{display:flex;justify-content:space-between;font-size:14px;color:var(--color-text-muted);margin-bottom:8px;}
@@ -365,6 +371,7 @@
     <input type="tel" id="custPhone" placeholder="07xxxxxxxxx">
     <label for="custAddress">عنوان التوصيل (اختياري)</label>
     <textarea id="custAddress" placeholder="المحافظة، المنطقة، أقرب نقطة دالة"></textarea>
+    <div id="paymentInfoBox"></div>
   </div>
 
   <div class="cart-summary">
@@ -429,6 +436,8 @@ const db = firebase.firestore();
 
 let WHATSAPP_NUMBER = "";
 let DELIVERY_FEE = 0;
+let PAYMENT_LABEL = "";
+let PAYMENT_ACCOUNT = "";
 let PRODUCTS = [];
 const cart = {}; // { productId: qty }
 
@@ -533,6 +542,8 @@ async function initStore(){
       const s = settingsDoc.data();
       WHATSAPP_NUMBER = s.whatsappNumber || "";
       DELIVERY_FEE = Number(s.deliveryFee) || 0;
+      PAYMENT_LABEL = s.paymentLabel || "";
+      PAYMENT_ACCOUNT = s.paymentAccount || "";
     }
 
     const snap = await db.collection('products').orderBy('createdAt','desc').get();
@@ -545,6 +556,23 @@ async function initStore(){
 
   renderProducts();
   renderCart();
+  renderPaymentInfo();
+}
+
+function renderPaymentInfo(){
+  const box = document.getElementById('paymentInfoBox');
+  if (!PAYMENT_ACCOUNT){
+    box.className = '';
+    box.innerHTML = '';
+    return;
+  }
+  box.className = 'payment-info-box';
+  const label = PAYMENT_LABEL || 'الدفع الإلكتروني';
+  box.innerHTML = `
+    💳 <strong>${label}</strong><br>
+    رقم الحساب: <strong>${PAYMENT_ACCOUNT}</strong><br>
+    يرجى إرسال وصل التحويل بعد إرسال طلبك عبر واتساب.
+  `;
 }
 
 function renderProducts(){
@@ -767,6 +795,10 @@ document.getElementById('checkoutBtn').addEventListener('click', ()=>{
   if (name) message += `\n\nالاسم: ${name}`;
   message += `\nرقم الهاتف: ${phone}`;
   if (address) message += `\nالعنوان: ${address}`;
+  if (PAYMENT_ACCOUNT){
+    message += `\n\n💳 ${PAYMENT_LABEL || 'الدفع الإلكتروني'}: ${PAYMENT_ACCOUNT}`;
+    message += `\nيرجى إرسال وصل التحويل بعد إرسال هذا الطلب.`;
+  }
 
   const encoded = encodeURIComponent(message);
   window.open(`https://wa.me/${WHATSAPP_NUMBER}?text=${encoded}`, '_blank');
