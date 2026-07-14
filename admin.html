@@ -242,6 +242,22 @@
       </p>
     </div>
     <div class="field">
+      <label>عرض كمية (اختياري)</label>
+      <p style="font-size:11.5px;color:var(--color-text-muted);margin:0 0 8px;">
+        مثال: لو القطعة 10 ألف، وتريد قطعتين بـ 18 ألف — اكتب 2 بالحقل الأول و18000 بالثاني. اتركهم فارغين إذا ما فيه عرض.
+      </p>
+      <div style="display:flex;gap:10px;">
+        <div style="flex:1;">
+          <label for="formDealQty" style="font-size:11.5px;">الكمية</label>
+          <input type="number" id="formDealQty" placeholder="مثال: 2">
+        </div>
+        <div style="flex:1;">
+          <label for="formDealPrice" style="font-size:11.5px;">السعر الكلي لهذي الكمية</label>
+          <input type="number" id="formDealPrice" placeholder="مثال: 18000">
+        </div>
+      </div>
+    </div>
+    <div class="field">
       <label for="formDesc">وصف قصير (يظهر بالبطاقة الرئيسية)</label>
       <textarea id="formDesc" placeholder="وصف مختصر وجذاب..."></textarea>
     </div>
@@ -451,6 +467,8 @@ function openProductForm(id){
     document.getElementById('formName').value = p.name || '';
     document.getElementById('formPrice').value = p.price || '';
     document.getElementById('formOldPrice').value = p.oldPrice || '';
+    document.getElementById('formDealQty').value = p.dealQty || '';
+    document.getElementById('formDealPrice').value = p.dealPrice || '';
     document.getElementById('formDesc').value = p.desc || '';
     document.getElementById('formDetails').value = p.details || '';
     document.getElementById('formImageUrl').value = p.image || '';
@@ -462,6 +480,8 @@ function openProductForm(id){
     document.getElementById('formName').value = '';
     document.getElementById('formPrice').value = '';
     document.getElementById('formOldPrice').value = '';
+    document.getElementById('formDealQty').value = '';
+    document.getElementById('formDealPrice').value = '';
     document.getElementById('formDesc').value = '';
     document.getElementById('formDetails').value = '';
     document.getElementById('formImageUrl').value = '';
@@ -491,6 +511,10 @@ document.getElementById('formSaveBtn').addEventListener('click', async ()=>{
   const price = Number(document.getElementById('formPrice').value);
   const oldPriceRaw = document.getElementById('formOldPrice').value.trim();
   const oldPrice = oldPriceRaw ? Number(oldPriceRaw) : null;
+  const dealQtyRaw = document.getElementById('formDealQty').value.trim();
+  const dealPriceRaw = document.getElementById('formDealPrice').value.trim();
+  const dealQty = dealQtyRaw ? Number(dealQtyRaw) : null;
+  const dealPrice = dealPriceRaw ? Number(dealPriceRaw) : null;
   const desc = document.getElementById('formDesc').value.trim();
   const details = document.getElementById('formDetails').value.trim();
   const inStock = document.getElementById('formInStock').checked;
@@ -509,13 +533,23 @@ document.getElementById('formSaveBtn').addEventListener('click', async ()=>{
     msgEl.textContent = 'السعر قبل التخفيض لازم يكون أكبر من السعر الحالي.';
     return;
   }
+  if ((dealQty !== null) !== (dealPrice !== null)){
+    msgEl.className = 'msg error';
+    msgEl.textContent = 'الرجاء تعبئة حقلي عرض الكمية الاثنين معاً، أو تركهم فارغين.';
+    return;
+  }
+  if (dealQty !== null && (dealQty < 2 || dealPrice >= dealQty * price)){
+    msgEl.className = 'msg error';
+    msgEl.textContent = 'تأكد إن الكمية 2 أو أكثر، وإن سعر العرض أقل من السعر العادي مضروب بالكمية.';
+    return;
+  }
 
   saveBtn.disabled = true;
   msgEl.textContent = 'جاري الحفظ...';
 
   try{
     const data = {
-      name, price, oldPrice, desc, details, inStock, image,
+      name, price, oldPrice, dealQty, dealPrice, desc, details, inStock, image,
       color: '#1B4B43',
       icon: '📦'
     };
