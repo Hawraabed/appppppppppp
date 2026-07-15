@@ -405,7 +405,7 @@
 
   <div class="cart-summary">
     <div class="sum-row"><span>المجموع الفرعي</span><span id="subtotalVal">0 د.ع</span></div>
-    <div class="sum-row" id="dealsSavingsRow" style="display:none;color:#3E7A5E;font-weight:700;"><span>خصم العروض</span><span id="dealsSavingsVal">0 د.ع</span></div>
+    <div class="sum-row" id="dealsSavingsRow" style="display:none;color:#3E7A5E;font-weight:700;"><span>إجمالي التوفير</span><span id="dealsSavingsVal">0 د.ع</span></div>
     <div class="sum-row"><span>التوصيل</span><span id="deliveryVal">0 د.ع</span></div>
     <div class="sum-row total"><span>المجموع الكلي</span><span id="totalVal">0 د.ع</span></div>
     <button class="checkout-btn" id="checkoutBtn" disabled>
@@ -516,6 +516,7 @@ function lineTotalFor(p, qty){
 function computeCartTotals(){
   const ids = Object.keys(cart);
   let naiveSubtotal = 0;
+  let originalSubtotal = 0;
   const groups = {};
 
   ids.forEach(id=>{
@@ -523,6 +524,8 @@ function computeCartTotals(){
     if (!p) return;
     const qty = cart[id];
     naiveSubtotal += Number(p.price) * qty;
+    const perUnitOriginal = (p.oldPrice && Number(p.oldPrice) > Number(p.price)) ? Number(p.oldPrice) : Number(p.price);
+    originalSubtotal += perUnitOriginal * qty;
 
     if (p.bundleGroup){
       if (!groups[p.bundleGroup]) groups[p.bundleGroup] = { items: [], dealQty: null, dealPrice: null };
@@ -560,7 +563,13 @@ function computeCartTotals(){
     actualSubtotal += lineTotalFor(p, qty);
   });
 
-  return { naiveSubtotal, actualSubtotal, dealsSavings: naiveSubtotal - actualSubtotal };
+  return {
+    naiveSubtotal,
+    originalSubtotal,
+    actualSubtotal,
+    dealsSavings: naiveSubtotal - actualSubtotal,
+    totalSavings: originalSubtotal - actualSubtotal
+  };
 }
 
 async function initStore(){
@@ -772,17 +781,17 @@ function renderCart(){
     `;
   }).join('');
 
-  const { actualSubtotal, dealsSavings } = computeCartTotals();
-  subtotal = actualSubtotal;
-  const total = subtotal + DELIVERY_FEE;
-  document.getElementById('subtotalVal').textContent = fmt(subtotal);
+  const { actualSubtotal, originalSubtotal, totalSavings } = computeCartTotals();
+  subtotal = originalSubtotal;
+  const total = actualSubtotal + DELIVERY_FEE;
+  document.getElementById('subtotalVal').textContent = fmt(originalSubtotal);
   document.getElementById('deliveryVal').textContent = fmt(DELIVERY_FEE);
   document.getElementById('totalVal').textContent = fmt(total);
 
   const dealsRow = document.getElementById('dealsSavingsRow');
-  if (dealsSavings > 0){
+  if (totalSavings > 0){
     dealsRow.style.display = 'flex';
-    document.getElementById('dealsSavingsVal').textContent = '-' + fmt(dealsSavings);
+    document.getElementById('dealsSavingsVal').textContent = '-' + fmt(totalSavings);
   } else {
     dealsRow.style.display = 'none';
   }
@@ -831,12 +840,13 @@ document.getElementById('checkoutBtn').addEventListener('click', ()=>{
     const lineTotal = p.bundleGroup ? Number(p.price) * qty : lineTotalFor(p, qty);
     lines += `• ${p.name} × ${qty} = ${fmt(lineTotal)}\n`;
   });
-  const { actualSubtotal, dealsSavings } = computeCartTotals();
+  const { actualSubtotal, originalSubtotal, totalSavings } = computeCartTotals();
   const total = actualSubtotal + DELIVERY_FEE;
 
   let message = "مرحباً 👋، أريد تأكيد طلب جديد:\n\n";
   message += lines;
-  if (dealsSavings > 0) message += `\nخصم العروض: -${fmt(dealsSavings)}`;
+  message += `\nالمجموع قبل الخصم: ${fmt(originalSubtotal)}`;
+  if (totalSavings > 0) message += `\nإجمالي التوفير: -${fmt(totalSavings)}`;
   message += `\nالتوصيل: ${fmt(DELIVERY_FEE)}`;
   message += `\nالمجموع الكلي: ${fmt(total)}`;
   if (name) message += `\n\nالاسم: ${name}`;
