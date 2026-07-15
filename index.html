@@ -242,7 +242,8 @@
   .cart-head h2{margin:0;font-size:19px;color:var(--color-primary-dark);}
   .close-btn{background:none;color:var(--color-text-muted);font-size:22px;line-height:1;padding:4px;}
 
-  .cart-items{flex:1;overflow-y:auto;padding:14px 22px;}
+  .cart-scroll{flex:1;overflow-y:auto;}
+  .cart-items{padding:14px 22px;}
   .empty-cart{text-align:center;color:var(--color-text-muted);padding:50px 10px;font-size:14px;}
 
   .cart-item{
@@ -375,28 +376,30 @@
     <button class="close-btn" id="closeCart">✕</button>
   </div>
 
-  <div class="cart-items" id="cartItems"></div>
+  <div class="cart-scroll">
+    <div class="cart-items" id="cartItems"></div>
 
-  <div class="cart-form">
-    <label for="custName">الاسم (اختياري)</label>
-    <input type="text" id="custName" placeholder="اسمك الكامل">
-    <label for="custPhone">رقم هاتفك <span style="color:var(--color-accent)">(مطلوب)</span></label>
-    <input type="tel" id="custPhone" placeholder="07xxxxxxxxx">
-    <label for="custAddress">عنوان التوصيل (اختياري)</label>
-    <textarea id="custAddress" placeholder="المحافظة، المنطقة، أقرب نقطة دالة"></textarea>
-    <div id="paymentMethodSection" class="payment-method-section">
-      <label>طريقة الدفع</label>
-      <div class="payment-options">
-        <label class="payment-option">
-          <input type="radio" name="paymentMethod" value="cod" checked>
-          <span>الدفع عند الاستلام</span>
-        </label>
-        <label class="payment-option">
-          <input type="radio" name="paymentMethod" value="electronic">
-          <span id="electronicOptionLabel">دفع إلكتروني</span>
-        </label>
+    <div class="cart-form">
+      <label for="custName">الاسم (اختياري)</label>
+      <input type="text" id="custName" placeholder="اسمك الكامل">
+      <label for="custPhone">رقم هاتفك <span style="color:var(--color-accent)">(مطلوب)</span></label>
+      <input type="tel" id="custPhone" placeholder="07xxxxxxxxx">
+      <label for="custAddress">عنوان التوصيل (اختياري)</label>
+      <textarea id="custAddress" placeholder="المحافظة، المنطقة، أقرب نقطة دالة"></textarea>
+      <div id="paymentMethodSection" class="payment-method-section">
+        <label>طريقة الدفع</label>
+        <div class="payment-options">
+          <label class="payment-option">
+            <input type="radio" name="paymentMethod" value="cod" checked>
+            <span>الدفع عند الاستلام</span>
+          </label>
+          <label class="payment-option">
+            <input type="radio" name="paymentMethod" value="electronic">
+            <span id="electronicOptionLabel">دفع إلكتروني</span>
+          </label>
+        </div>
+        <div id="paymentInfoBox"></div>
       </div>
-      <div id="paymentInfoBox"></div>
     </div>
   </div>
 
