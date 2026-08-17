@@ -231,6 +231,32 @@
         <div class="empty-note">جاري التحميل...</div>
       </div>
     </section>
+
+    <section class="card-block">
+      <div class="section-head">
+        <h2>طلبات الزبائن</h2>
+        <button class="add-btn-top" id="exportOrdersBtn">⬇️ تحميل كملف Excel</button>
+      </div>
+      <p class="hint">كل طلب يوصل عبر واتساب ينحفظ هنا تلقائياً كسجل دائم لبيانات الزبائن.</p>
+      <div style="overflow-x:auto;">
+        <table id="ordersTable" style="width:100%;border-collapse:collapse;font-size:13px;">
+          <thead>
+            <tr style="text-align:right;border-bottom:2px solid var(--color-border);">
+              <th style="padding:10px 8px;">التاريخ</th>
+              <th style="padding:10px 8px;">الاسم</th>
+              <th style="padding:10px 8px;">الهاتف</th>
+              <th style="padding:10px 8px;">العنوان</th>
+              <th style="padding:10px 8px;">المنتجات</th>
+              <th style="padding:10px 8px;">الدفع</th>
+              <th style="padding:10px 8px;">المجموع</th>
+            </tr>
+          </thead>
+          <tbody id="ordersTableBody">
+            <tr><td colspan="7" style="padding:20px;text-align:center;color:var(--color-text-muted);">جاري التحميل...</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
   </main>
 </div>
 
@@ -282,12 +308,15 @@
       <textarea id="formDetails" placeholder="تفاصيل أكثر عن المنتج، المكونات، طريقة الاستخدام..."></textarea>
     </div>
     <div class="field">
-      <label for="formImageUrl">رابط صورة المنتج (اختياري)</label>
-      <input type="text" id="formImageUrl" placeholder="https://i.imgur.com/xxxxx.jpg">
+      <label for="formImageFile">صورة المنتج — ارفعها مباشرة من جهازك</label>
+      <input type="file" id="formImageFile" accept="image/*">
       <p style="font-size:11.5px;color:var(--color-text-muted);margin:6px 0 0;">
-        ارفع صورتك مجاناً على imgbb.com أو postimages.org وانسخ رابط الصورة المباشر هنا.
+        تُحفظ الصورة مباشرة بدون أي موقع خارجي. يفضّل صور أقل من 3 ميجابايت.
       </p>
       <div id="formImagePreview">لا توجد صورة</div>
+      <p id="formImageStatus" style="font-size:11.5px;color:var(--color-text-muted);margin:6px 0 0;"></p>
+      <label for="formImageUrl" style="margin-top:14px;">أو الصق رابط صورة جاهز (اختياري)</label>
+      <input type="text" id="formImageUrl" placeholder="https://i.imgur.com/xxxxx.jpg">
     </div>
     <div class="checkbox-row">
       <input type="checkbox" id="formInStock" checked>
@@ -337,6 +366,7 @@ auth.onAuthStateChanged(user=>{
     dashboard.classList.remove('hidden');
     loadSettings();
     loadProducts();
+    loadOrders();
   } else {
     loginScreen.classList.remove('hidden');
     dashboard.classList.add('hidden');
@@ -479,6 +509,9 @@ function openProductForm(id){
   const msgEl = document.getElementById('formMsg');
   msgEl.textContent = '';
   msgEl.className = 'msg';
+  uploadedImageDataUrl = null;
+  document.getElementById('formImageFile').value = '';
+  document.getElementById('formImageStatus').textContent = '';
   if (id){
     const p = PRODUCTS_CACHE.find(x=>x.id===id);
     if (!p) return;
@@ -492,7 +525,13 @@ function openProductForm(id){
     document.getElementById('formBundleGroup').value = p.bundleGroup || '';
     document.getElementById('formDesc').value = p.desc || '';
     document.getElementById('formDetails').value = p.details || '';
-    document.getElementById('formImageUrl').value = p.image || '';
+    if (p.image && p.image.startsWith('data:')){
+      document.getElementById('formImageUrl').value = '';
+      uploadedImageDataUrl = p.image;
+      document.getElementById('formImageStatus').textContent = 'صورة محفوظة مسبقاً — اختر ملف جديد لتغييرها.';
+    } else {
+      document.getElementById('formImageUrl').value = p.image || '';
+    }
     document.getElementById('formInStock').checked = p.inStock !== false;
     updateImagePreview(p.image || '');
   } else {
@@ -525,7 +564,55 @@ document.getElementById('productFormOverlay').addEventListener('click', (e)=>{
 });
 
 document.getElementById('formImageUrl').addEventListener('input', (e)=>{
+  uploadedImageDataUrl = null;
+  document.getElementById('formImageStatus').textContent = '';
   updateImagePreview(e.target.value.trim());
+});
+
+let uploadedImageDataUrl = null;
+
+document.getElementById('formImageFile').addEventListener('change', (e)=>{
+  const file = e.target.files[0];
+  const statusEl = document.getElementById('formImageStatus');
+  if (!file) return;
+
+  statusEl.textContent = 'جاري تجهيز الصورة...';
+
+  const reader = new FileReader();
+  reader.onload = (ev)=>{
+    const img = new Image();
+    img.onload = ()=>{
+      const MAX_DIM = 900;
+      let w = img.width, h = img.height;
+      if (w > h && w > MAX_DIM){ h = Math.round(h * MAX_DIM / w); w = MAX_DIM; }
+      else if (h > MAX_DIM){ w = Math.round(w * MAX_DIM / h); h = MAX_DIM; }
+
+      const canvas = document.createElement('canvas');
+      canvas.width = w; canvas.height = h;
+      canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+
+      let quality = 0.75;
+      let dataUrl = canvas.toDataURL('image/jpeg', quality);
+      while (dataUrl.length > 700000 && quality > 0.3){
+        quality -= 0.1;
+        dataUrl = canvas.toDataURL('image/jpeg', quality);
+      }
+
+      if (dataUrl.length > 800000){
+        statusEl.textContent = 'الصورة كبيرة كثير حتى بعد الضغط، جرب صورة ثانية أصغر.';
+        uploadedImageDataUrl = null;
+        return;
+      }
+
+      uploadedImageDataUrl = dataUrl;
+      document.getElementById('formImageUrl').value = '';
+      updateImagePreview(dataUrl);
+      const kb = Math.round(dataUrl.length / 1024);
+      statusEl.textContent = `تم تجهيز الصورة (${kb} كيلوبايت) ✓`;
+    };
+    img.src = ev.target.result;
+  };
+  reader.readAsDataURL(file);
 });
 
 document.getElementById('formSaveBtn').addEventListener('click', async ()=>{
@@ -541,7 +628,7 @@ document.getElementById('formSaveBtn').addEventListener('click', async ()=>{
   const desc = document.getElementById('formDesc').value.trim();
   const details = document.getElementById('formDetails').value.trim();
   const inStock = document.getElementById('formInStock').checked;
-  const image = document.getElementById('formImageUrl').value.trim();
+  const image = uploadedImageDataUrl || document.getElementById('formImageUrl').value.trim();
   const msgEl = document.getElementById('formMsg');
   const saveBtn = document.getElementById('formSaveBtn');
 
@@ -598,6 +685,89 @@ document.getElementById('formSaveBtn').addEventListener('click', async ()=>{
     msgEl.className = 'msg error';
     msgEl.textContent = 'تعذّر حفظ المنتج. تأكد من إعداد Firebase (Firestore) بشكل صحيح.';
   }
+});
+
+/* ---------- طلبات الزبائن ---------- */
+let ORDERS_CACHE = [];
+
+function loadOrders(){
+  const tbody = document.getElementById('ordersTableBody');
+  db.collection('orders').orderBy('createdAt', 'desc').limit(500).get().then(snap=>{
+    ORDERS_CACHE = snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+    renderOrdersTable();
+  }).catch(err=>{
+    console.error(err);
+    tbody.innerHTML = `<tr><td colspan="7" style="padding:20px;text-align:center;color:var(--color-text-muted);">تعذّر تحميل الطلبات.</td></tr>`;
+  });
+}
+
+function formatOrderDate(order){
+  if (order.createdAt && order.createdAt.toDate){
+    const d = order.createdAt.toDate();
+    return d.toLocaleDateString('ar-IQ') + ' ' + d.toLocaleTimeString('ar-IQ', {hour:'2-digit', minute:'2-digit'});
+  }
+  return '—';
+}
+
+function itemsSummary(order){
+  if (!order.items) return '';
+  return order.items.map(it => `${it.name} ×${it.qty}`).join('، ');
+}
+
+function renderOrdersTable(){
+  const tbody = document.getElementById('ordersTableBody');
+  if (ORDERS_CACHE.length === 0){
+    tbody.innerHTML = `<tr><td colspan="7" style="padding:20px;text-align:center;color:var(--color-text-muted);">ما وصل أي طلب بعد.</td></tr>`;
+    return;
+  }
+  tbody.innerHTML = ORDERS_CACHE.map(o => `
+    <tr style="border-bottom:1px solid var(--color-border);">
+      <td style="padding:9px 8px;white-space:nowrap;">${formatOrderDate(o)}</td>
+      <td style="padding:9px 8px;">${o.customerName || '—'}</td>
+      <td style="padding:9px 8px;white-space:nowrap;">${o.customerPhone || '—'}</td>
+      <td style="padding:9px 8px;max-width:180px;">${o.customerAddress || '—'}</td>
+      <td style="padding:9px 8px;max-width:220px;">${itemsSummary(o)}</td>
+      <td style="padding:9px 8px;white-space:nowrap;">${o.paymentMethod || '—'}</td>
+      <td style="padding:9px 8px;white-space:nowrap;font-weight:800;">${Number(o.total||0).toLocaleString('en-US')} د.ع</td>
+    </tr>
+  `).join('');
+}
+
+function csvEscape(val){
+  const s = String(val == null ? '' : val).replace(/"/g, '""');
+  return `"${s}"`;
+}
+
+document.getElementById('exportOrdersBtn').addEventListener('click', ()=>{
+  if (ORDERS_CACHE.length === 0){
+    alert('ما فيه طلبات لتصديرها بعد.');
+    return;
+  }
+  const headers = ['التاريخ','الاسم','الهاتف','العنوان','المنتجات','طريقة الدفع','قبل الخصم','التوفير','التوصيل','المجموع الكلي'];
+  const rows = ORDERS_CACHE.map(o => [
+    formatOrderDate(o),
+    o.customerName || '',
+    o.customerPhone || '',
+    o.customerAddress || '',
+    itemsSummary(o),
+    o.paymentMethod || '',
+    o.originalSubtotal || 0,
+    o.totalSavings || 0,
+    o.deliveryFee || 0,
+    o.total || 0
+  ]);
+  let csv = '\uFEFF' + headers.map(csvEscape).join(',') + '\n';
+  rows.forEach(r => { csv += r.map(csvEscape).join(',') + '\n'; });
+
+  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `طلبات-الزبائن-${new Date().toISOString().slice(0,10)}.csv`;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
 });
 </script>
 
