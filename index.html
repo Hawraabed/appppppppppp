@@ -4,6 +4,10 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Whip&amp;Wash | مواد طبيعية للعناية بالبشرة</title>
+<meta property="og:title" content="Whip&amp;Wash | مواد طبيعية للعناية بالبشرة">
+<meta property="og:description" content="صابون ومرطبات طبيعية بلمسة يدوية. تصفّح منتجاتنا واطلبها مباشرة عبر واتساب.">
+<meta property="og:type" content="website">
+<meta name="twitter:card" content="summary">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@600;700;800&family=Tajawal:wght@400;500;700&family=Playfair+Display:ital,wght@0,600;0,700;1,600&display=swap" rel="stylesheet">
 <style>
@@ -833,12 +837,14 @@ document.getElementById('checkoutBtn').addEventListener('click', ()=>{
   }
 
   let lines = "";
+  const orderItems = [];
   ids.forEach(id=>{
     const p = PRODUCTS.find(x=>x.id===id);
     if (!p) return;
     const qty = cart[id];
     const lineTotal = p.bundleGroup ? Number(p.price) * qty : lineTotalFor(p, qty);
     lines += `• ${p.name} × ${qty} = ${fmt(lineTotal)}\n`;
+    orderItems.push({ productId: id, name: p.name, qty, unitPrice: Number(p.price), lineTotal });
   });
   const { actualSubtotal, originalSubtotal, totalSavings } = computeCartTotals();
   const total = actualSubtotal + DELIVERY_FEE;
@@ -853,16 +859,36 @@ document.getElementById('checkoutBtn').addEventListener('click', ()=>{
   message += `\nرقم الهاتف: ${phone}`;
   if (address) message += `\nالعنوان: ${address}`;
 
+  let paymentMethodLabel = 'الدفع عند الاستلام';
   if (PAYMENT_ACCOUNT){
     const selectedMethod = document.querySelector('input[name="paymentMethod"]:checked');
     const isElectronic = selectedMethod && selectedMethod.value === 'electronic';
     if (isElectronic){
-      message += `\n\nطريقة الدفع: ${PAYMENT_LABEL || 'الدفع الإلكتروني'} (تحويل)`;
+      paymentMethodLabel = `${PAYMENT_LABEL || 'الدفع الإلكتروني'} (تحويل)`;
+      message += `\n\nطريقة الدفع: ${paymentMethodLabel}`;
       message += `\n💳 رقم الحساب: ${PAYMENT_ACCOUNT}`;
       message += `\nسأرسل وصل التحويل بعد هذا الطلب.`;
     } else {
       message += `\n\nطريقة الدفع: الدفع عند الاستلام`;
     }
+  }
+
+  // نحفظ نسخة من الطلب بقاعدة البيانات حتى يضل عند صاحب المتجر سجل دائم بكل الطلبات
+  try{
+    db.collection('orders').add({
+      customerName: name || null,
+      customerPhone: phone,
+      customerAddress: address || null,
+      items: orderItems,
+      originalSubtotal,
+      totalSavings,
+      deliveryFee: DELIVERY_FEE,
+      total,
+      paymentMethod: paymentMethodLabel,
+      createdAt: firebase.firestore.FieldValue.serverTimestamp()
+    }).catch(err => console.error('order save failed:', err));
+  } catch(err){
+    console.error('order save failed:', err);
   }
 
   const encoded = encodeURIComponent(message);
